@@ -1,0 +1,568 @@
+Nagios Server on ubuntu 16.04
+
+Server
+------
+
+sudo apt-get update
+
+sudo apt-get upgrade 
+
+reboot
+
+
+Before starting installation nagios server require below packages
+
+nagios-4.3.4.tar.gz
+nrpe-3.2.1.tar.gz
+nagios-plugins-2.2.1.tar.gz
+
+
+login to root
+-------------
+apt-get install build-essential libgd2-xpm-dev openssl libssl-dev unzip nagios-nrpe-plugin
+sudo apt-get install wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip
+
+useradd nagios
+groupadd nagcmd
+usermod -a -G nagcmd nagios
+usermod -a -G nagios,nagcmd www-data
+
+Download and extract the Nagios core
+-------------------------------------
+Step 1 - 
+
+cd ~
+wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.3.4.tar.gz
+tar -xzf nagios*.tar.gz
+cd nagios-4.3.4
+
+
+Step 2 - Compile Nagios
+-----------------------
+
+./configure --with-nagios-group=nagios --with-command-group=nagcmd
+
+make all
+sudo make install
+sudo make install-commandmode
+sudo make install-init
+sudo make install-config
+/usr/bin/install -c -m 644 sample-config/httpd.conf /etc/apache2/sites-available/nagios.conf
+
+cp -R contrib/eventhandlers/ /usr/local/nagios/libexec/
+chown -R nagios:nagios /usr/local/nagios/libexec/eventhandlers
+
+Step 3 - Install the Nagios Plugins
+------------------------------------
+
+cd ~
+wget https://nagios-plugins.org/download/nagios-plugins-2.1.2.tar.gz
+tar -xzf nagios-plugins*.tar.gz
+cd nagios-plugin-2.1.2/
+
+./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl
+make
+make install
+
+vim /usr/local/nagios/etc/nagios.cfg
+
+cfg_dir=/usr/local/nagios/etc/servers
+
+
+mkdir -p /usr/local/nagios/etc/servers
+
+vim /usr/local/nagios/etc/objects/contacts.cfg
+
+email  yogesh@fcoos.net
+
+
+Configuring Apache
+------------------
+
+sudo a2enmod rewrite
+sudo a2enmod cgi
+
+sudo htpasswd -c /usr/local/nagios/etc/htpasswd.users nagiosadmin
+
+sudo ln -s /etc/apache2/sites-available/nagios.conf /etc/apache2/sites-enabled/
+
+service apache2 restart
+
+Step 4 — Installing the check_nrpe Plugin
+-----------------------------------------
+
+cd ~
+curl -L -O https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-3.2.1/nrpe-3.2.1.tar.gz
+
+tar zxf nrpe-*.tar.gz
+
+cd nrpe-*
+
+./configure
+
+make check_nrpe
+sudo make install-plugin
+
+vim /etc/systemd/system/nagios.service
+
+[Unit]
+Description=Nagios
+BindTo=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+Type=simple
+User=nagios
+Group=nagios
+ExecStart=/usr/local/nagios/bin/nagios /usr/local/nagios/etc/nagios.cfg
+
+
+systemctl enable /etc/systemd/system/nagios.service
+
+systemctl start nagios
+systemctl status nagios
+
+
+Step 4 — Accessing the Nagios Web Interface
+-------------------------------------------
+
+Before opening web console do the following changes on apache file
+
+vim /etc/apache2/sites-available/000-default.conf
+
+ServerAdmin webmaster@localhost
+        DocumentRoot /var/www/html
+        RedirectMatch ^/$ /nagios
+
+systemctl start apache2
+--------------------------------------------------------------------------------------------------------------------------------------
+
+How to configure Postfix to use Gmail SMTP on Ubuntu 16.04 for nagios alert
+---------------------------------------------------------------------------
+
+apt install -y mailutils postfix
+
+Internet Site
+
+gmail.com
+
+vim /etc/postfix/main.cf
+
+myhostname = localhost
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+myorigin = /etc/mailname
+mydestination =  $myhostname, localhost.$mydomain, localhost, $mydomain
+relayhost =  [smtp.gmail.com]:587
+mynetworks = 127.0.0.0/8
+mailbox_command = procmail -a "$EXTENSION"
+mailbox_size_limit = 0
+recipient_delimiter = +
+inet_interfaces = all
+inet_protocols = ipv4
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_tls_CAfile = /etc/postfix/cacert.pem
+smtp_use_tls = yes
+smtp_generic_maps = hash:/etc/postfix/generic
+sender_canonical_maps = regexp:/etc/postfix/sender_canonical
+
+
+vim /etc/postfix/sasl_passwd
+
+[smtp.gmail.com]:587 username@gmail.com:password
+
+
+sudo postmap /etc/postfix/sasl_passwd
+
+
+sudo chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
+sudo chmod 0600 /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db
+
+
+cat /etc/ssl/certs/thawte_Primary_Root_CA.pem | sudo tee -a /etc/postfix/cacert.pem
+
+vim /etc/postfix/sender_canonical
+
+/.+/ yogeshredhat14@gmail.com
+
+vim /etc/hosts
+
+127.0.0.1       localhost
+127.0.1.1       gmail.com localhost localhost.localdomain
+
+
+vim /etc/aliases
+
+postmaster: root
+root: yogeshredhat14@gmail.com
+
+vim /etc/postfix/generic
+
+root yogeshredhat14@gmail.com
+
+echo "Test Email message body" | mail -s "Email test subject" yogesh.aseervatham@tarams.com
+
+/etc/init/d/postfix restart
+
+Check and run "Send custom service notification" from console you will receive mail 
+-------------------------------------------------------------------------------------------------------------------------------------
+
+Monitor Client
+--------------
+
+login to client machine
+------------------------
+
+It require - nagios-plugins-2.2.1.tar.gz,  nrpe-3.2.1.tar.gz
+
+Refer digital ocean - https://www.digitalocean.com/community/tutorials/how-to-install-nagios-4-and-monitor-your-servers-on-ubuntu-16-04
+
+before installing packages please do the below steps
+
+su - root
+
+apt-get update
+
+apt-get upgrade
+
+apt-get install build-essential libgd2-xpm-dev openssl libssl-dev unzip
+
+useradd nagios
+
+Download Nagios Plugins
+-----------------------
+
+cd ~
+curl -L -O http://nagios-plugins.org/download/nagios-plugins-2.2.1.tar.gz
+
+
+tar zxf nagios-plugins-*.tar.gz
+
+cd nagios-plugins-*
+
+./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl
+
+make
+
+make install
+
+cd ~
+curl -L -O https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-3.2.1/nrpe-3.2.1.tar.gz
+
+tar zxf nrpe-*.tar.gz
+
+cd nrpe-*
+
+./configure --enable-command-args --with-nagios-user=nagios --with-nagios-group=nagios --with-ssl=/usr/bin/openssl --with-ssl-lib=/usr/lib/x86_64-linux-gnu
+
+make all
+sudo make install
+sudo make install-config
+sudo make install-init
+
+
+vim /usr/local/nagios/etc/nrpe.cfg
+
+allowed_hosts=127.0.0.1,::1,your_nagios_server_private_ip
+
+server_address=yourclient ip
+
+systemctl start nrpe.service
+
+systemctl status nrpe.service
+
+Now go to Server
+----------------
+
+check below command 
+
+/usr/local/nagios/libexec/check_nrpe -H client ip
+
+Output will be, NRPE v3.2.1
+
+
+Now go to client
+----------------
+
+df -h /
+
+output
+
+
+Filesystem                   Size  Used Avail Use% Mounted on
+/dev/mapper/ubuntu--vg-root   18G  1.9G   16G  12% /
+
+
+now i am going to monitor /dev/mapper/ubuntu--vg-root h/d
+
+
+vim /usr/local/nagios/etc/nrpe.cfg
+
+
+command[check_hda1]=/usr/lib/nagios/plugins/check_disk -w 20% -c 10% -p /dev/mapper/ubuntu--vg-root
+
+systemctl restart nrpe.service
+
+Now login to server
+-------------------
+
+vim /usr/local/nagios/etc/servers/nagiosclient.cfg
+
+define host {
+        use                             linux-server
+        host_name                       nagios-client
+        alias                           My client server
+        address                         10.191.5.56
+        max_check_attempts              5
+        check_period                    24x7
+        notification_interval           30
+        notification_period             24x7
+}
+
+
+define service {
+        use                             generic-service
+        host_name                       nagios-client
+        service_description             /dev/mapper/ubuntu--vg-root space
+        check_command                   check_nrpe!check_hda1
+}
+
+define service {
+        use                             generic-service
+        host_name                       nagios-client
+        service_description             CPU load
+        check_command                   check_nrpe!check_load
+}
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             Check Users
+      check_command                   check_nrpe!check_users
+}
+
+
+systemctl restart nagios
+systemctl status nagios
+
+
+I you want to monitor Apache service
+------------------------------------
+
+Server
+------
+
+vim /usr/local/nagios/etc/servers/nagiosclient.cfg
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             Apache monitoring
+      check_command                   check_nrpe!check_http
+}
+
+systemctl restart nagios
+
+Client
+------
+
+add this line
+
+command[check_http]=/usr/local/nagios/libexec/check_http -H 10.191.5.56
+
+systemctl restart nrpe.service
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+How to Write custom plugin for monitoring service on nagios
+-----------------------------------------------------------
+Server
+------
+
+vim /usr/local/nagios/etc/servers/nagiosclient.cfg
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             ftpd monitoring
+      check_command                   check_nrpe!check_ftpd
+}
+
+systemctl restart nagios
+
+
+Client
+------
+
+step 1
+------
+
+apt-get install vsftpd
+
+cd /usr/local/nagios/libexec
+
+vim check_ftpd
+
+#!/bin/bash
+systemctl status vsftpd > /dev/null
+a=$(echo $?)
+if [ "$a" == "0" ];then
+echo " FTP daemon is Running";
+else
+echo " FTP daemon is not Running";
+exit 2
+fi
+
+
+chown nagios:nagios check_ftpd
+
+chmot 755 check_ftpd
+
+step 2
+------
+
+vim /usr/local/nagios/etc/nrpe.cfg 
+
+command[check_ftpd]=/usr/local/nagios/libexec/check_ftpd -H 10.191.5.56
+
+
+systemctl restart nrpe.service
+--------------------------------------------------------------------------------------------------------------------------------------
+If you want to send nagios notification from group basis, You need to mention below details,
+
+Host cfg file  --   1,   contact_groups yogesh123
+
+                    2,   hostgroup_name client-10.191.5.56
+
+                    3,   members         nagios-client ( ---> hostname )
+
+
+contacts cfg file -- 1, contactgroup_name   yogesh123
+
+
+
+
+for example
+-----------
+
+vim /usr/local/nagios/etc/servers/client.cfg
+
+define host {
+        use                             linux-server
+        host_name                       nagios-client
+        alias                           My client server
+        address                         10.191.5.56
+        max_check_attempts              5
+        check_period                    24x7
+        notification_interval           30
+        notification_period             24x7
+        contact_groups                  tarams_team
+}
+
+define service {
+        use                             generic-service
+        host_name                       nagios-client
+        service_description             CPU load
+        check_command                   check_nrpe!check_load
+        contact_groups                  tarams_team
+}
+
+
+define service {
+        use                             generic-service
+        host_name                       nagios-client
+        service_description             /dev/mapper/ubuntu--vg-root space
+        check_command                   check_nrpe!check_hda1
+        contact_groups                  tarams_team
+
+}
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             Check Users
+      check_command                   check_nrpe!check_users
+        contact_groups                  tarams_team
+}
+
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             Check process
+      check_command                   check_nrpe!check_procs
+        contact_groups                  tarams_team
+}
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             Apache monitoring
+      check_command                   check_nrpe!check_http
+        contact_groups                  tarams_team
+}
+
+
+define service {
+      use                             generic-service
+      host_name                       nagios-client
+      service_description             ftpd monitoring
+      check_command                   check_nrpe!check_ftpd
+        contact_groups                  tarams_team
+}
+
+
+
+define hostgroup{
+        hostgroup_name  client-10.191.5.56 ; The name of the hostgroup
+        alias           client 5.56 ; Long name of the group
+        members         nagios-client ; Comma separated list of hosts that belong to this group
+        }
+                                                                                                                   
+
+
+vim /usr/local/nagios/etc/servers/client-contacts.cfg
+
+
+define contact{
+        contact_name                    client-5.56-server
+        alias                           client-5.56
+        service_notification_period     24x7
+        host_notification_period        24x7
+        service_notification_options    u,c,r
+        host_notification_options       d,r
+        service_notification_commands   notify-service-by-email
+        host_notification_commands      notify-host-by-email
+        email                           yogesh@fcoos.net
+     }
+
+define contact{
+        contact_name                    Tarams-client-5.56
+        alias                           Tarams
+        service_notification_period     24x7
+        host_notification_period        24x7
+        service_notification_options    u,c,r
+        host_notification_options       d,r
+        service_notification_commands   notify-service-by-email
+        host_notification_commands      notify-host-by-email
+        email                           yogesh.aseervatham@tarams.com
+     }
+
+define contactgroup{
+        contactgroup_name       tarams_team
+        alias                   Nagios Administrators
+        members                 client-5.56-server, Tarams-client-5.56
+        }
+
+
+
+
+
+
+
+
