@@ -19,7 +19,7 @@ nagios-plugins-2.2.1.tar.gz
 
 login to root
 -------------
-apt-get install build-essential libgd2-xpm-dev openssl libssl-dev unzip nagios-nrpe-plugin
+apt-get install build-essential libgd2-xpm-dev openssl libssl-dev unzip nagios-nrpe-plugin apache2
 sudo apt-get install wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip
 
 useradd nagios
