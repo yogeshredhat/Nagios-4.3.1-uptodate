@@ -21,8 +21,8 @@ login to root
 -------------
 apt-get install build-essential libgd2-xpm-dev openssl libssl-dev unzip nagios-nrpe-plugin apache2 php7.0-cli
 sudo apt-get install wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip 
-apache2-mod-php7.0 php-gd libgd-dev sendmail unzip nagios-nrpe-server nagios-plugins wget build-essential apache2 php 
-php-gd libgd-dev unzip
+apache2-mod-php7.0 php-gd libgd-dev sendmail unzip nagios-nrpe-server nagios-plugins wget build-essential apache2 php php-cli
+php-gd libgd-dev unzip apt-get install wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip
 
 
 useradd nagios
@@ -36,7 +36,7 @@ Step 1 -
 
 cd ~
 wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.3.4.tar.gz
-tar -xzf nagios*.tar.gz
+tar -xvzf nagios*.tar.gz
 cd nagios-4.3.4
 
 
@@ -60,7 +60,7 @@ Step 3 - Install the Nagios Plugins
 
 cd ~
 wget https://nagios-plugins.org/download/nagios-plugins-2.1.2.tar.gz
-tar -xzf nagios-plugins*.tar.gz
+tar -xzvf nagios-plugins*.tar.gz
 cd nagios-plugin-2.1.2/
 
 ./configure --with-nagios-user=nagios --with-nagios-group=nagios --with-openssl
@@ -97,7 +97,7 @@ Step 4 — Installing the check_nrpe Plugin
 cd ~
 curl -L -O https://github.com/NagiosEnterprises/nrpe/releases/download/nrpe-3.2.1/nrpe-3.2.1.tar.gz
 
-tar zxf nrpe-*.tar.gz
+tar zxvf nrpe-*.tar.gz
 
 cd nrpe-*
 
