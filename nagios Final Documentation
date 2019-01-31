@@ -22,7 +22,7 @@ login to root
 apt-get install build-essential libgd2-xpm-dev openssl libssl-dev unzip nagios-nrpe-plugin apache2 php7.0-cli
 sudo apt-get install wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip 
 apache2-mod-php7.0 php-gd libgd-dev sendmail unzip nagios-nrpe-server nagios-plugins wget build-essential apache2 php php-cli
-php-gd libgd-dev unzip apt-get install wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip
+php-gd libgd-dev unzip wget build-essential apache2 php apache2-mod-php7.0 php-gd libgd-dev sendmail unzip
 
 
 useradd nagios
